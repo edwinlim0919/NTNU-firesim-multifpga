@@ -72,6 +72,23 @@ trait UnpackedWrapperConfig {
   }
 }
 
+
+/**
+ *  Represents the interface of the target to which bridges connect.
+ */
+trait TargetChannelIO {
+  /** Mapping of all output pipe channels. */
+  def wireOutputPortMap: Map[String, ReadyValidIO[Data]]
+  /** Mapping of all input pipe channels. */
+  def wireInputPortMap: Map[String, ReadyValidIO[Data]]
+  /** Mapping of output ready-valid channels. */
+  def rvOutputPortMap: Map[String, TargetRVPortType]
+  /** Mapping of input ready-valid channels. */
+  def rvInputPortMap: Map[String, TargetRVPortType]
+  /** Channel carrying clock tokens to the target. */
+  def clockElement: (String, DecoupledIO[Data])
+}
+
 /**
   * Builds a Record of tokenized interfaces based on a set of [[FAMEChannelConnectionAnnotations]].
   * Chisel-types are reconstructed by looking up a FIRRTL type in [[SimWrapperConfig].leafTypeMap
@@ -87,7 +104,8 @@ trait UnpackedWrapperConfig {
   * name.
   */
 
-abstract class ChannelizedWrapperIO(val config: SimWrapperConfig) extends Record with UnpackedWrapperConfig {
+abstract class ChannelizedWrapperIO(val config: SimWrapperConfig)
+    extends Record with UnpackedWrapperConfig with TargetChannelIO {
 
   def regenTypesFromField(name: String, tpe: firrtl.ir.Type): Seq[(String, ChLeafType)] = tpe match {
     case firrtl.ir.BundleType(fields) => fields.flatMap(f => regenTypesFromField(prefixWith(name, f.name), f.tpe))
@@ -98,9 +116,8 @@ abstract class ChannelizedWrapperIO(val config: SimWrapperConfig) extends Record
 
   def regenTypes(refTargets: Seq[ReferenceTarget]): Seq[(String, ChLeafType)] = {
     val port = leafTypeMap(refTargets.head.copy(component = Seq()))
-    val fieldName = refTargets.head.component match {
-      case firrtl.annotations.TargetToken.Field(fName) :: Nil => fName
-      case firrtl.annotations.TargetToken.Field(fName) :: fields => fName
+    val fieldName = refTargets.head.component.headOption match {
+      case Some(firrtl.annotations.TargetToken.Field(fName)) => fName
       case _ => throw new RuntimeException("Expected only a bits field in ReferenceTarget's component.")
     }
 

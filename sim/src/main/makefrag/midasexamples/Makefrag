@@ -42,13 +42,17 @@ mem_model_args = $(shell cat $(SIM_RUNTIME_CONF))
 COMMON_SIM_ARGS ?= $(mem_model_args)
 vcs_args = +vcs+initreg+0 +vcs+initmem+0
 
+# Rocket Chip stage requires a fully qualified classname for each fragment, whereas Chipyard's does not.
+# This retains a consistent TARGET_CONFIG naming convention across the different target projects.
+subst_prefix=,$(TARGET_CONFIG_PACKAGE).
+
 $(FIRRTL_FILE) $(ANNO_FILE): $(chisel_srcs) $(FIRRTL_JAR) $(SCALA_BUILDTOOL_DEPS)
 	mkdir -p $(@D)
 	$(call run_scala_main,$(firesim_sbt_project),freechips.rocketchip.system.Generator, \
 		--target-dir $(GENERATED_DIR) \
 		--name $(long_name) \
 		--top-module $(DESIGN_PACKAGE).$(DESIGN) \
-		--configs $(TARGET_CONFIG_PACKAGE).$(TARGET_CONFIG))
+		--configs $(TARGET_CONFIG_PACKAGE).$(subst _,$(subst_prefix),$(TARGET_CONFIG)))
 
 ##########################
 # Driver Sources & Flags #
@@ -60,8 +64,7 @@ DRIVER_H = $(shell find $(driver_dir) -name "*.h")
 DRIVER_CC := \
 		$(driver_dir)/midasexamples/simif_peek_poke.cc \
 		$(driver_dir)/midasexamples/Driver.cc \
-		$(wildcard $(addprefix $(firesim_lib_dir)/, $(addsuffix .cc, bridges/* )))  \
-		$(RISCV)/lib/libfesvr.a
+		$(wildcard $(addprefix $(firesim_lib_dir)/, $(addsuffix .cc, bridges/* )))
 
 TARGET_CXX_FLAGS := -DDESIGNDRIVERCLASS=$(DESIGN)_t -DDESIGNNAME_$(DESIGN) -I$(driver_dir) -I$(RISCV)/include -I$(driver_dir)/midasexamples -g
 TARGET_LD_FLAGS :=
@@ -90,11 +93,11 @@ waveform = $(if $(WAVEFORM),$(abspath $(WAVEFORM)),$(OUTPUT_DIR)/$(benchmark).$1
 run-verilator-debug run-verilator: run-verilator% : $(GENERATED_DIR)/V$(DESIGN)% $(LOADMEM)
 	mkdir -p $(OUTPUT_DIR)
 	cd $(GENERATED_DIR) && ./$(notdir $<) $(COMMON_SIM_ARGS) $(ARGS) \
-	$(loadmem) +dramsim \
+	$(loadmem) \
 	+waveform=$(call waveform,verilator,vcd) 2> $(call logfile,verilator)
 
 run-vcs run-vcs-debug: run-vcs%: $(GENERATED_DIR)/$(DESIGN)% $(LOADMEM)
 	mkdir -p $(OUTPUT_DIR)
 	cd $(GENERATED_DIR) && ./$(notdir $<) $(vcs_args) $(COMMON_SIM_ARGS) $(ARGS) \
-	$(loadmem) +dramsim \
+	$(loadmem) \
 	+waveform=$(call waveform,vcs,vpd) 2> $(call logfile,vcs)

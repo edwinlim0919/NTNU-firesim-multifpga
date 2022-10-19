@@ -32,8 +32,6 @@ private[passes] class SimulationMapping(targetName: String) extends firrtl.Trans
   override def name = "[Golden Gate] Simulation Mapping"
 
   private def generateHeaderAnnos(c: PlatformShim): Seq[GoldenGateOutputFileAnnotation] = {
-    def vMacro(arg: (String, Long)): String = s"`define ${arg._1} ${arg._2}\n"
-
     val csb = new OutputFileBuilder(
       """// Golden Gate-generated Driver Header
         |// This contains target-specific preprocessor macro definitions,
@@ -54,7 +52,7 @@ private[passes] class SimulationMapping(targetName: String) extends firrtl.Trans
 
     vsb append "`ifndef __%s_H\n".format(targetName.toUpperCase)
     vsb append "`define __%s_H\n".format(targetName.toUpperCase)
-    c.top.module.headerConsts map vMacro foreach vsb.append
+    c.genVHeader(vsb.getBuilder, targetName)
     vsb append "`endif  // __%s_H\n".format(targetName.toUpperCase)
     Seq(csb.toAnnotation, vsb.toAnnotation)
   }
@@ -92,14 +90,11 @@ private[passes] class SimulationMapping(targetName: String) extends firrtl.Trans
     val innerCircuit = loweredInnerState.circuit
 
     // Generate the encapsulating simulator RTL
-    lazy val shim = PlatformShim(innerState.annotations, portTypeMap)
+    lazy val shim = PlatformShim(SimWrapperConfig(innerState.annotations, portTypeMap))
     val (chirrtl, elaboratedAnnos) = midas.targetutils.ElaborateChiselSubCircuit(LazyModule(shim).module)
 
-    val transforms = Seq(
-      Dependency[Fame1Instances],
-      Dependency(PreLinkRenaming))
     val outerAnnos = PreLinkRenamingAnnotation(Namespace(innerCircuit)) +: elaboratedAnnos
-    val outerState = new Compiler(Forms.LowForm ++ transforms)
+    val outerState = new Compiler(Forms.LowForm ++ Seq(Dependency(PreLinkRenaming)))
       .execute(CircuitState(chirrtl, ChirrtlForm, outerAnnos))
 
     val outerCircuit = outerState.circuit

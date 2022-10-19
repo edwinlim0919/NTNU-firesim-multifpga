@@ -65,19 +65,6 @@ case class FAMEChannelConnectionAnnotation(
 
   def getBridgeModule(): String = sources.getOrElse(sinks.get).head.module
 
-  def moveFromBridge(portName: String): FAMEChannelConnectionAnnotation = {
-    def updateRT(rT: ReferenceTarget): ReferenceTarget = ModuleTarget(rT.circuit, rT.circuit).ref(portName).field(rT.ref)
-
-    require(sources == None || sinks == None, "Bridge-connected channels cannot loopback")
-    val rTs = sources.getOrElse(sinks.get) ++ clock ++ (channelInfo match {
-      case i: DecoupledForwardChannel => Seq(i.readySink.getOrElse(i.readySource.get))
-      case other => Seq()
-    })
-
-    val localRenames = RenameMap(Map((rTs.map(rT => rT -> Seq(updateRT(rT)))):_*))
-    copy(globalName = s"${portName}_${globalName}").update(localRenames).head.asInstanceOf[this.type]
-  }
-
   override def getTargets: Seq[ReferenceTarget] = clock ++: (sources.toSeq.flatten ++ sinks.toSeq.flatten)
 }
 
@@ -202,19 +189,6 @@ object DecoupledForwardChannel {
 }
 
 /**
-  * Specifies what form of FAME transform should be applied when
-  * generated a simulation model from a target module.
-  */
-abstract class FAMETransformType
-
-/**
-  * When tied to a target in a FAMETransformAnnotation, this specifies
-  * that the module should be transformed with the basic LI-BDN
-  * compliant FAME1 transform.
-  */
-case object FAME1Transform extends FAMETransformType
-
-/**
   * Indicates that a particular target module from the "AQB" canonical
   * form should be transformed to a FAME model.
   *
@@ -227,10 +201,9 @@ case object FAME1Transform extends FAMETransformType
   *  transformed identically.
   */
 case class FAMETransformAnnotation(
-  transformType: FAMETransformType,
   target: ModuleTarget) extends SingleTargetAnnotation[ModuleTarget] with FAMEAnnotation {
   def targets = Seq(target)
-  def duplicate(n: ModuleTarget) = this.copy(transformType, n)
+  def duplicate(n: ModuleTarget) = this.copy(n)
 }
 
 /**

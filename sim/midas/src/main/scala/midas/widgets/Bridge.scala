@@ -3,7 +3,7 @@
 package midas
 package widgets
 
-import midas.core.{SimWrapperChannels}
+import midas.core.{TargetChannelIO}
 
 import freechips.rocketchip.config.{Parameters, Field}
 
@@ -61,30 +61,22 @@ trait Bridge[HPType <: Record with HasChannels, WidgetType <: BridgeModule[HPTyp
 
     // Generate the bridge annotation
     annotate(new ChiselAnnotation { def toFirrtl = {
-        SerializableBridgeAnnotation(
+        BridgeAnnotation(
           self.toNamed.toTarget,
-          bridgeIO.allChannelNames,
+          bridgeIO.bridgeChannels,
           widgetClass = widgetClassSymbol.fullName,
           widgetConstructorKey = constructorArg)
       }
     })
-    // Emit annotations to capture channel information
-    bridgeIO.generateAnnotations()
   }
 }
 
 trait HasChannels {
   /**
-    *  Called to emit FCCAs in the target RTL in order to assign the target
-    *  port's fields to channels.
+    * Returns a list of channel descriptors.
     */
-  def generateAnnotations(): Unit
-
-  /**
-    * Returns a list of channel names for which FAMEChannelConnectionAnnotations have been generated
-    */
-  def allChannelNames(): Seq[String]
+  def bridgeChannels(): Seq[BridgeChannel]
 
   // Called in FPGATop to connect the instantiated bridge to channel ports on the wrapper
-  private[midas] def connectChannels2Port(bridgeAnno: BridgeIOAnnotation, channels: SimWrapperChannels): Unit
+  private[midas] def connectChannels2Port(bridgeAnno: BridgeIOAnnotation, channels: TargetChannelIO): Unit
 }
