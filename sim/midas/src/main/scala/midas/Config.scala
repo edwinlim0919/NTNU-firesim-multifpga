@@ -113,8 +113,14 @@ class F1Config extends Config(new Config((site, here, up) => {
 class F1Config1Mem extends Config(new Config((site, here, up) => {
   case Platform       => (p: Parameters) => new F1Shim()(p)
   case HasDMAChannel  => true
+  case StreamEngineInstantiatorKey => (e: StreamEngineParameters, p: Parameters) => new CPUManagedStreamEngine(p, e)
+  case CPUManagedAXI4Key => Some(CPUManagedAXI4Params(
+    addrBits = 64,
+    dataBits = 512,
+    idBits = 6,
+  ))
+  case FPGAManagedAXI4Key   => None
   case CtrlNastiKey   => NastiParameters(32, 25, 12)
-  case DMANastiKey => NastiParameters(512, 64, 4) // change to 4 bit id
   case HostMemChannelKey => HostMemChannelParams(
     size      = 0x400000000L, // 16 GiB
     beatBytes = 8,
