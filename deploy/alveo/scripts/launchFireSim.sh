@@ -6,14 +6,24 @@ SCRIPT_DIR=$(dirname $(readlink -f $0))
 FPGA=$1
 WORKLOAD=$2
 
-if [ -z ${FIRESIM_CONFIG+x} ]; then
-	echo "Variable FIRESIM_CONFIG needs to be set!" >&2
+if [ -z ${PLATFORM+x} ]; then
+	echo "Variable PLATFORM needs to be set!" >&2
 	exit 1
 fi
 
-DRIVER="${SCRIPT_DIR}/../../../sim/output/u250/FireSim-${FIRESIM_CONFIG}/FireSim-u250"
-RUNTIME_CONFIG="${SCRIPT_DIR}/../../../sim/output/u250/FireSim-${FIRESIM_CONFIG}/runtime.conf"
-BITSTREAM="${SCRIPT_DIR}/../../../sim/generated-src/u250/FireSim-${FIRESIM_CONFIG}/u250/vivado_proj/firesim.bit"
+if [ -z ${TARGET_CONFIG+x} ]; then
+	echo "Variable TARGET_CONFIG needs to be set!" >&2
+	exit 1
+fi
+
+if [ -z ${PLATFORM_CONFIG+x} ]; then
+	echo "Variable PLATFORM_CONFIG needs to be set!" >&2
+	exit 1
+fi
+
+DRIVER="${SCRIPT_DIR}/../../../sim/output/${PLATFORM}/FireSim-${TARGET_CONFIG}-${PLATFORM_CONFIG}/FireSim-${PLATFORM}"
+RUNTIME_CONFIG="${SCRIPT_DIR}/../../../sim/output/${PLATFORM}/FireSim-${TARGET_CONFIG}-${PLATFORM_CONFIG}/runtime.conf"
+BITSTREAM="${SCRIPT_DIR}/../../../sim/generated-src/${PLATFORM}/FireSim-${TARGET_CONFIG}-${PLATFORM_CONFIG}/${PLATFORM}/vivado_proj/firesim.bit"
 IMAGE_IMG="${RUN_DIR}/workload.img"
 IMAGE_BIN="${RUN_DIR}/workload.bin"
 

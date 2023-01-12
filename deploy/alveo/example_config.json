@@ -7,7 +7,7 @@
 		"name" : "unnamed",
 		"scripts" : {
 			"preexec" : "scripts/prepareFireSimImage.sh",
-			"exec" : "scripts/launchFireSimConfig.sh",
+			"exec" : "scripts/launchFireSim.sh",
 			"postexec" : "scripts/finishFireSimImage.sh"
 		},
 		"parameters": {

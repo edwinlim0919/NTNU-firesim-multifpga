@@ -61,6 +61,9 @@ header := $(GENERATED_DIR)/$(BASE_FILE_NAME).const.h
 # The midas-generated simulator RTL which will be baked into the FPGA shell project
 simulator_verilog := $(GENERATED_DIR)/$(BASE_FILE_NAME).sv
 
+ALVEO_PLATFORMS := u250
+ALVEO_PLATFORMS += u280
+
 ####################################
 # Golden Gate Invocation           #
 ####################################
@@ -202,17 +205,21 @@ $(vitis): $(header) $(DRIVER_CC) $(DRIVER_H) $(midas_cc) $(midas_h)
 	GEN_DIR=$(OUTPUT_DIR)/build OUT_DIR=$(OUTPUT_DIR) DRIVER="$(DRIVER_CC)" \
 	TOP_DIR=$(chipyard_dir)
 
-$(u250): export CXXFLAGS := $(CXXFLAGS) $(common_cxx_flags) $(DRIVER_CXXOPTS)
-$(u250): export LDFLAGS := $(LDFLAGS) $(common_ld_flags) -Wl,-rpath='$$$$ORIGIN'
+ifneq (,$(findstring $(PLATFORM),$(ALVEO_PLATFORMS)))
+
+$($(PLATFORM)): export CXXFLAGS := $(CXXFLAGS) $(common_cxx_flags) $(DRIVER_CXXOPTS)
+$($(PLATFORM)): export LDFLAGS := $(LDFLAGS) $(common_ld_flags) -Wl,-rpath='$$$$ORIGIN'
 
 # Compile Driver
-$(u250): $(header) $(DRIVER_CC) $(DRIVER_H) $(midas_cc) $(midas_h) $(GENERATED_DIR)/$(BASE_FILE_NAME).runtime.conf
+$($(PLATFORM)): $(header) $(DRIVER_CC) $(DRIVER_H) $(midas_cc) $(midas_h) $(GENERATED_DIR)/$(BASE_FILE_NAME).runtime.conf
 	mkdir -p $(OUTPUT_DIR)/build
 	cp $(header) $(OUTPUT_DIR)/build/
 	cp -f $(GENERATED_DIR)/$(BASE_FILE_NAME).runtime.conf $(OUTPUT_DIR)/runtime.conf
-	$(MAKE) -C $(simif_dir) u250 PLATFORM=u250 DRIVER_NAME=$(DESIGN) GEN_FILE_BASENAME=$(BASE_FILE_NAME) \
+	$(MAKE) -C $(simif_dir) $(PLATFORM) PLATFORM=$(PLATFORM) DRIVER_NAME=$(DESIGN) GEN_FILE_BASENAME=$(BASE_FILE_NAME) \
 	GEN_DIR=$(OUTPUT_DIR)/build OUT_DIR=$(OUTPUT_DIR) DRIVER="$(DRIVER_CC)" \
 	TOP_DIR=$(chipyard_dir)
+
+endif
 
 #############################
 # FPGA Build Initialization #
@@ -263,56 +270,59 @@ replace-rtl: $(fpga_delivery_files) $(fpga_sim_delivery_files)
 
 .PHONY: replace-rtl
 
-ifeq ($(PLATFORM), u250)
+ALVEO_PLATFORMS  = u250
+ALVEO_PLATFORMS += u280
 
-u250_stamp             := $(GENERATED_DIR)/u250/stamp
-u250_repo_state        := $(GENERATED_DIR)/u250/design/repo_state
-u250_firesim_top       := $(GENERATED_DIR)/u250/design/firesim_top.sv
-u250_firesim_defines   := $(GENERATED_DIR)/u250/design/firesim_defines.vh
-u250_firesim_synth_xdc := $(GENERATED_DIR)/u250/design/firesim_synth.xdc
-u250_firesim_impl_xdc  := $(GENERATED_DIR)/u250/design/firesim_impl.xdc
-u250_firesim_env       := $(GENERATED_DIR)/u250/scripts/firesim_env.tcl
+ifneq (,$(findstring $(PLATFORM),$(ALVEO_PLATFORMS)))
 
-$(u250_stamp): $(shell find $(board_dir)/cl_firesim -name '*')
+alveo_stamp             := $(GENERATED_DIR)/$(PLATFORM)/stamp
+alveo_repo_state        := $(GENERATED_DIR)/$(PLATFORM)/design/repo_state
+alveo_firesim_top       := $(GENERATED_DIR)/$(PLATFORM)/design/firesim_top.sv
+alveo_firesim_defines   := $(GENERATED_DIR)/$(PLATFORM)/design/firesim_defines.vh
+alveo_firesim_synth_xdc := $(GENERATED_DIR)/$(PLATFORM)/design/firesim_synth.xdc
+alveo_firesim_impl_xdc  := $(GENERATED_DIR)/$(PLATFORM)/design/firesim_impl.xdc
+alveo_firesim_env       := $(GENERATED_DIR)/$(PLATFORM)/scripts/firesim_env.tcl
+
+$(alveo_stamp): $(shell find $(board_dir)/cl_firesim -name '*')
 	mkdir -p $(@D)
 	cp -rf $(board_dir)/cl_firesim -T $(@D)
 	touch $@
 
-$(u250_repo_state): $(simulator_verilog) $(u250_stamp)
+$(alveo_repo_state): $(simulator_verilog) $(alveo_stamp)
 	mkdir -p $(@D)
 	$(firesim_base_dir)/../scripts/repo_state_summary.sh > $@
 
-$(u250_firesim_top): $(simulator_verilog) $(u250_stamp)
+$(alveo_firesim_top): $(simulator_verilog) $(alveo_stamp)
 	mkdir -p $(@D)
 	cp -f $< $@
 
 # Unused since these constraints are not yet applicable
-$(u250_firesim_synth_xdc): $(simulator_verilog) $(u250_stamp)
+$(alveo_firesim_synth_xdc): $(simulator_verilog) $(alveo_stamp)
 	mkdir -p $(@D)
 	cp -f $(GENERATED_DIR)/$(BASE_FILE_NAME).synthesis.xdc $@
 	sed -i "s/ firesim_top\// design_1_i\/firesim_wrapper_0\/inst\/firesim_top\//g" $@
 
 # Unused since these constraints are not yet applicable
-$(u250_firesim_impl_xdc): $(simulator_verilog) $(u250_stamp)
+$(alveo_firesim_impl_xdc): $(simulator_verilog) $(alveo_stamp)
 	mkdir -p $(@D)
 	cp -f $(GENERATED_DIR)/$(BASE_FILE_NAME).implementation.xdc $@
 	sed -i "s/ WRAPPER_INST\/CL\/firesim_top\// design_1_i\/firesim_wrapper_0\/inst\/firesim_top\//g" $@
 
-$(u250_firesim_env): $(simulator_verilog) $(u250_stamp)
+$(alveo_firesim_env): $(simulator_verilog) $(alveo_stamp)
 	mkdir -p $(@D)
 	cp -f $(GENERATED_DIR)/$(BASE_FILE_NAME).env.tcl $@
 
-$(u250_firesim_defines): $(simulator_verilog) $(u250_stamp)
+$(alveo_firesim_defines): $(simulator_verilog) $(alveo_stamp)
 	mkdir -p $(@D)
 	cp -f $(GENERATED_DIR)/$(BASE_FILE_NAME).defines.vh $@
 	echo "\`define ABSTRACTCLOCKGATE" >> $@
 
-replace-rtl-u250: $(u250_stamp) $(u250_repo_state) $(u250_firesim_top) $(u250_firesim_env) $(u250_firesim_defines)
+replace-rtl-alveo: $(alveo_stamp) $(alveo_repo_state) $(alveo_firesim_top) $(alveo_firesim_env) $(alveo_firesim_defines)
 
-fpga: replace-rtl-u250
-	cd $(GENERATED_DIR)/u250 && vivado -mode batch -source ./scripts/main.tcl
+fpga: replace-rtl-alveo
+	cd $(GENERATED_DIR)/$(PLATFORM) && vivado -mode batch -source ./scripts/main.tcl
 
-.PHONY: replace-rtl-u250 fpga $(u250_stamp) $(u250_firesim_top) $(u250_firesim_synth_xdc) $(u250_firesim_impl_xdc) $(u250_firesim_env) $(u250_firesim_defines)
+.PHONY: replace-rtl-alveo fpga $(alveo_stamp) $(alveo_firesim_top) $(alveo_firesim_synth_xdc) $(alveo_firesim_impl_xdc) $(alveo_firesim_env) $(alveo_firesim_defines)
 
 else
 
