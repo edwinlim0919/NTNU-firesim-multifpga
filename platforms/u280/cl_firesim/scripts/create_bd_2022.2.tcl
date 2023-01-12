@@ -233,7 +233,7 @@ proc create_root_design { parentCell firesim_freq } {
 
   set sysclk0 [ create_bd_intf_port -mode Slave -vlnv xilinx.com:interface:diff_clock_rtl:1.0 sysclk0 ]
   set_property -dict [ list \
-   CONFIG.FREQ_HZ {300000000} \
+   CONFIG.FREQ_HZ {100000000} \
    ] $sysclk0
 
   set pci_express_x16 [ create_bd_intf_port -mode Master -vlnv xilinx.com:interface:pcie_7x_mgt_rtl:1.0 pci_express_x16 ]
