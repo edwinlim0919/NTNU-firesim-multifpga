@@ -21,7 +21,7 @@ if [ -z ${PLATFORM_CONFIG+x} ]; then
 	exit 1
 fi
 
-DRIVER="${SCRIPT_DIR}/../../../sim/output/${PLATFORM}/FireSim-${TARGET_CONFIG}-${PLATFORM_CONFIG}/FireSim-${PLATFORM}"
+DRIVER="${SCRIPT_DIR}/../../../sim/output/${PLATFORM}/FireSim-${TARGET_CONFIG}-${PLATFORM_CONFIG}/FireSim-alveo"
 RUNTIME_CONFIG="${SCRIPT_DIR}/../../../sim/output/${PLATFORM}/FireSim-${TARGET_CONFIG}-${PLATFORM_CONFIG}/runtime.conf"
 BITSTREAM="${SCRIPT_DIR}/../../../sim/generated-src/${PLATFORM}/FireSim-${TARGET_CONFIG}-${PLATFORM_CONFIG}/${PLATFORM}/vivado_proj/firesim.bit"
 IMAGE_IMG="${RUN_DIR}/workload.img"
