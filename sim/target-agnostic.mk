@@ -172,7 +172,14 @@ vcs-debug: $(vcs_debug)
 ############################
 DRIVER_CXXOPTS ?= -O2
 
+
+
+ifneq (,$(findstring $(PLATFORM),$(ALVEO_PLATFORMS)))
+$(PLATFORM) = $(OUTPUT_DIR)/$(DESIGN)-alveo
+else
 $(PLATFORM) = $(OUTPUT_DIR)/$(DESIGN)-$(PLATFORM)
+endif
+
 $(PLATFORM): $($(PLATFORM))
 
 .PHONY: driver
@@ -215,7 +222,7 @@ $($(PLATFORM)): $(header) $(DRIVER_CC) $(DRIVER_H) $(midas_cc) $(midas_h) $(GENE
 	mkdir -p $(OUTPUT_DIR)/build
 	cp $(header) $(OUTPUT_DIR)/build/
 	cp -f $(GENERATED_DIR)/$(BASE_FILE_NAME).runtime.conf $(OUTPUT_DIR)/runtime.conf
-	$(MAKE) -C $(simif_dir) $(PLATFORM) PLATFORM=$(PLATFORM) DRIVER_NAME=$(DESIGN) GEN_FILE_BASENAME=$(BASE_FILE_NAME) \
+	$(MAKE) -C $(simif_dir) alveo PLATFORM=alveo DRIVER_NAME=$(DESIGN) GEN_FILE_BASENAME=$(BASE_FILE_NAME) \
 	GEN_DIR=$(OUTPUT_DIR)/build OUT_DIR=$(OUTPUT_DIR) DRIVER="$(DRIVER_CC)" \
 	TOP_DIR=$(chipyard_dir)
 
@@ -269,9 +276,6 @@ $(fpga_driver_dir)/$(DESIGN)-$(PLATFORM): $($(PLATFORM))
 replace-rtl: $(fpga_delivery_files) $(fpga_sim_delivery_files)
 
 .PHONY: replace-rtl
-
-ALVEO_PLATFORMS  = u250
-ALVEO_PLATFORMS += u280
 
 ifneq (,$(findstring $(PLATFORM),$(ALVEO_PLATFORMS)))
 

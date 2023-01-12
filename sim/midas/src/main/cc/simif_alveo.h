@@ -5,13 +5,13 @@
 #include "bridges/cpu_managed_stream.h"
 
 
-class simif_u250_t: public virtual simif_t
+class simif_alveo_t: public virtual simif_t
 {
   public:
-    simif_u250_t(int argc, char** argv);
-    virtual ~simif_u250_t();
+    simif_alveo_t(int argc, char** argv);
+    virtual ~simif_alveo_t();
 
-    // Unused by u250 since initialization / deinitization is done in the constructor
+    // Unused by alveo since initialization / deinitization is done in the constructor
     virtual void host_init(int argc, char** argv) { (void) argc; (void) argv; };
     virtual int host_finish() { return 0; };
 

@@ -1,4 +1,4 @@
-#include "simif_u250.h"
+#include "simif_alveo.h"
 #include <cassert>
 
 #include <stdint.h>
@@ -28,7 +28,7 @@ fpga_pci_check_file_id(char *path, uint16_t id)
     return 0;
 }
 
-simif_u250_t::simif_u250_t(int argc, char** argv) {
+simif_alveo_t::simif_alveo_t(int argc, char** argv) {
 #ifdef SIMULATION_XSIM
     mkfifo(driver_to_xsim, 0666);
     fprintf(stderr, "opening driver to xsim\n");
@@ -52,9 +52,9 @@ simif_u250_t::simif_u250_t(int argc, char** argv) {
 
 
   using namespace std::placeholders;
-  auto mmio_read_func  = std::bind(&simif_u250_t::read, this, _1);
-  auto pcis_read_func  = std::bind(&simif_u250_t::pcis_read, this, _1, _2, _3);
-  auto pcis_write_func = std::bind(&simif_u250_t::pcis_write, this, _1, _2, _3);
+  auto mmio_read_func  = std::bind(&simif_alveo_t::read, this, _1);
+  auto pcis_read_func  = std::bind(&simif_alveo_t::pcis_read, this, _1, _2, _3);
+  auto pcis_write_func = std::bind(&simif_alveo_t::pcis_write, this, _1, _2, _3);
 
   for (int i = 0; i < CPUMANAGEDSTREAMENGINE_0_from_cpu_stream_count; i++) {
     auto params = CPUManagedStreamParameters(
@@ -86,18 +86,18 @@ simif_u250_t::simif_u250_t(int argc, char** argv) {
   }
 }
 
-size_t simif_u250_t::pull(unsigned stream_idx, void* dest, size_t num_bytes, size_t threshold_bytes) {
+size_t simif_alveo_t::pull(unsigned stream_idx, void* dest, size_t num_bytes, size_t threshold_bytes) {
   assert(stream_idx < to_host_streams.size());
   return this->to_host_streams[stream_idx].pull(dest, num_bytes, threshold_bytes);
 }
 
-size_t simif_u250_t::push(unsigned stream_idx, void* src, size_t num_bytes, size_t threshold_bytes) {
+size_t simif_alveo_t::push(unsigned stream_idx, void* src, size_t num_bytes, size_t threshold_bytes) {
   assert(stream_idx < from_host_streams.size());
   return this->from_host_streams[stream_idx].push(src, num_bytes, threshold_bytes);
 }
 
 
-void simif_u250_t::check_rc(int rc, char * infostr) {
+void simif_alveo_t::check_rc(int rc, char * infostr) {
 #ifndef SIMULATION_XSIM
     if (rc) {
         if (infostr) {
@@ -110,7 +110,7 @@ void simif_u250_t::check_rc(int rc, char * infostr) {
 #endif
 }
 
-void simif_u250_t::fpga_shutdown() {
+void simif_alveo_t::fpga_shutdown() {
 #ifndef SIMULATION_XSIM
     int ret = munmap(bar0_base, bar0_size);
     assert(ret == 0);
@@ -119,7 +119,7 @@ void simif_u250_t::fpga_shutdown() {
 #endif
 }
 
-void simif_u250_t::fpga_setup(int slot_id) {
+void simif_alveo_t::fpga_setup(int slot_id) {
 #ifndef SIMULATION_XSIM
     int domain = 0;
     int device_id = 0;
@@ -203,28 +203,28 @@ void simif_u250_t::fpga_setup(int slot_id) {
 
 
 
-simif_u250_t::~simif_u250_t() {
+simif_alveo_t::~simif_alveo_t() {
     fpga_shutdown();
 }
 
-void * simif_u250_t::fpga_pci_bar_get_mem_at_offset(uint64_t offset){
+void * simif_alveo_t::fpga_pci_bar_get_mem_at_offset(uint64_t offset){
     assert(!(((uint64_t)(offset + 4)) > bar0_size));
     return bar0_base + offset;
 }
 
-int simif_u250_t::fpga_pci_poke(uint64_t offset, uint32_t value) {
+int simif_alveo_t::fpga_pci_poke(uint64_t offset, uint32_t value) {
     uint32_t *reg_ptr = (uint32_t *)fpga_pci_bar_get_mem_at_offset(offset);
     *reg_ptr = value;
     return 0;
 }
 
-int simif_u250_t::fpga_pci_peek(uint64_t offset, uint32_t *value) {
+int simif_alveo_t::fpga_pci_peek(uint64_t offset, uint32_t *value) {
     uint32_t *reg_ptr = (uint32_t *)fpga_pci_bar_get_mem_at_offset(offset);
     *value = *reg_ptr;
     return 0;
 }
 
-void simif_u250_t::write(size_t addr, uint32_t data) {
+void simif_alveo_t::write(size_t addr, uint32_t data) {
 #ifdef SIMULATION_XSIM
     uint64_t cmd = (((uint64_t)(0x80000000 | addr)) << 32) | (uint64_t)data;
     char * buf = (char*)&cmd;
@@ -236,7 +236,7 @@ void simif_u250_t::write(size_t addr, uint32_t data) {
 }
 
 
-uint32_t simif_u250_t::read(size_t addr) {
+uint32_t simif_alveo_t::read(size_t addr) {
 #ifdef SIMULATION_XSIM
     uint64_t cmd = addr;
     char * buf = (char*)&cmd;
@@ -258,7 +258,7 @@ uint32_t simif_u250_t::read(size_t addr) {
 #endif
 }
 
-size_t simif_u250_t::pcis_read(size_t addr, char* data, size_t size) {
+size_t simif_alveo_t::pcis_read(size_t addr, char* data, size_t size) {
 #ifdef SIMULATION_XSIM
   assert(false); // PCIS is unsupported in FPGA-level metasimulation
 #else
@@ -266,7 +266,7 @@ size_t simif_u250_t::pcis_read(size_t addr, char* data, size_t size) {
 #endif
 }
 
-size_t simif_u250_t::pcis_write(size_t addr, char* data, size_t size) {
+size_t simif_alveo_t::pcis_write(size_t addr, char* data, size_t size) {
 #ifdef SIMULATION_XSIM
   assert(false); // PCIS is unsupported in FPGA-level metasimulation
 #else
@@ -275,7 +275,7 @@ size_t simif_u250_t::pcis_write(size_t addr, char* data, size_t size) {
 }
 
 
-uint32_t simif_u250_t::is_write_ready() {
+uint32_t simif_alveo_t::is_write_ready() {
     uint64_t addr = 0x4;
 #ifdef SIMULATION_XSIM
     uint64_t cmd = addr;

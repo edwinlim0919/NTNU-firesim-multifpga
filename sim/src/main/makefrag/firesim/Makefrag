@@ -22,6 +22,9 @@ OUTPUT_DIR    := $(firesim_base_dir)/output/$(PLATFORM)/$(name_tuple)
 # This is prefix is currently assumed by the fpga build flow
 BASE_FILE_NAME := FireSim-generated
 
+ALVEO_PLATFORMS := u250
+ALVEO_PLATFORMS += u280
+
 ##################
 # RTL Generation #
 ##################
@@ -92,8 +95,14 @@ DRIVER_H = \
 	$(DROMAJO_REQS) \
 	$(TESTCHIPIP_CSRC_DIR)/testchip_tsi.h
 
+ifneq (,$(findstring $(PLATFORM),$(ALVEO_PLATFORMS)))
+DRIVER_PLATFORM = alveo
+else
+DRIVER_PLATFORM = $(PLATFORM)
+endif
+
 DRIVER_CC = \
-		$(addprefix $(driver_dir)/firesim/, $(addsuffix .cc, firesim_top systematic_scheduler firesim_$(PLATFORM))) \
+		$(addprefix $(driver_dir)/firesim/, $(addsuffix .cc, firesim_top systematic_scheduler firesim_$(DRIVER_PLATFORM))) \
 	    $(wildcard $(addprefix $(firesim_lib_dir)/, $(addsuffix .cc, bridges/* fesvr/* bridges/tracerv/*)))  \
 	    $(RISCV)/lib/libfesvr.a \
 	    $(TESTCHIPIP_CSRC_DIR)/testchip_tsi.cc
@@ -171,7 +180,7 @@ verilator_args =
 vcs = $(GENERATED_DIR)/$(DESIGN)
 vcs_debug = $(GENERATED_DIR)/$(DESIGN)-debug
 vcs_args = +vcs+initreg+0 +vcs+initmem+0
-xsim = $(GENERATED_DIR)/$(DESIGN)-$(PLATFORM)
+xsim = $(GENERATED_DIR)/$(DESIGN)-$(DRIVER_PLATFORM)
 sim_binary_basename := $(basename $(notdir $(SIM_BINARY)))
 
 run-verilator: $(verilator)
