@@ -19,7 +19,9 @@
 			"name": "%name%",
 			"worker": "%worker%",
 			"resource": "%resource%",
-			"FIRESIM_CONFIG": "FireSimRocketConfig_BaseF1Config1Mem_F60MHz",
+			"PLATFORM": "u250",
+			"TARGET_CONFIG": "FireSimRocketConfig",
+			"PLATFORM_CONFIG": "BaseF1Config1Mem_F50MHz",
 			"CUSTOM_RUNTIME_CONFIG": "common/custom_runtime.conf"
 		}
 	},

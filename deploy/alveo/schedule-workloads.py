@@ -82,7 +82,7 @@ def runWorker(workerId, runDir, workloadQueue: Queue, resource):
             print(f"[Worker #{workerId}] failed to create log file '{workloadDir}/run.log', using stdout!")
             logFile = sys.stdout
 
-        workloadEnvironment = replaceValues(mergeDict(os.environ.copy(), workload['environment']), workerValueMap)
+        workloadEnvironment = replaceValues(mergeDict(workload['environment'], os.environ.copy()), workerValueMap)
         errorOccured = False
         for script in ['preexec', 'exec', 'postexec']:
             if workload['scripts'][script] is not None:
