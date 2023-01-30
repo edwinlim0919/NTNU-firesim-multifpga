@@ -1,0 +1,1 @@
+../../u250/scripts/synthesis.tcl

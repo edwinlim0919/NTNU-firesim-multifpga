@@ -1,0 +1,1 @@
+../../u250/scripts/main.tcl

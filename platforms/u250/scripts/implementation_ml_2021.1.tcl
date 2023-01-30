@@ -1,9 +1,9 @@
-variable ml_start_directive Explore
-variable ml_max_critical_paths 150
-variable ml_max_strategies 5
+set ml_start_directive Explore
+set ml_max_critical_paths 150
+set ml_max_strategies 5
 
-variable ml_qor_suggestions ${root_dir}/vivado_proj/ml_qor_suggestions.rqs
-variable ml_strategy_dir ${root_dir}/vivado_proj/ml_strategies
+set ml_qor_suggestions ${root_dir}/vivado_proj/ml_qor_suggestions.rqs
+set ml_strategy_dir ${root_dir}/vivado_proj/ml_strategies
 
 # Cleanup
 foreach path [list ${ml_qor_suggestions} ${ml_strategy_dir}] {
@@ -12,9 +12,9 @@ foreach path [list ${ml_qor_suggestions} ${ml_strategy_dir}] {
     }
 }
 
-variable impl_run [get_runs impl_1]
-variable WNS -1
-variable WHS -1
+set impl_run [get_runs impl_1]
+set WNS -1
+set WHS -1
 
 reset_runs ${impl_run}
 set_property STEPS.OPT_DESIGN.ARGS.DIRECTIVE ${ml_start_directive} ${impl_run}
@@ -35,7 +35,7 @@ set WNS [get_property STATS.WNS [get_runs ${impl_run}]]
 set WHS [get_property STATS.WHS [get_runs ${impl_run}]]
 
 if {$WNS < 0 || $WHS < 0} {
-    variable ml_tcls [list]
+    set ml_tcls [list]
 
     open_run ${impl_run}
     report_qor_suggestions -max_paths ${ml_max_critical_paths} -max_strategies ${ml_max_strategies} -no_split -quiet
@@ -43,7 +43,7 @@ if {$WNS < 0 || $WHS < 0} {
     close_design
 
     for {set i 1} {$i <= ${ml_max_strategies}} {incr i} {
-        variable tclFile ${root_dir}/vivado_proj/ml_strategies/impl_1Project_MLStrategyCreateRun${i}.tcl
+        set tclFile ${root_dir}/vivado_proj/ml_strategies/impl_1Project_MLStrategyCreateRun${i}.tcl
         if {[file exists ${tclFile}]} {
             lappend ml_tcls ${tclFile}
         }

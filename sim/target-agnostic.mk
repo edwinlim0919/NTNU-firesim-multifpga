@@ -237,6 +237,8 @@ else
 board_dir 	   := $(platforms_dir)/$(PLATFORM)
 endif
 
+ifeq (,$(findstring $(PLATFORM),$(ALVEO_PLATFORMS)))
+
 fpga_work_dir  := $(board_dir)/cl_$(name_tuple)
 fpga_build_dir := $(fpga_work_dir)/build
 verif_dir      := $(fpga_work_dir)/verif
@@ -277,7 +279,16 @@ replace-rtl: $(fpga_delivery_files) $(fpga_sim_delivery_files)
 
 .PHONY: replace-rtl
 
-ifneq (,$(findstring $(PLATFORM),$(ALVEO_PLATFORMS)))
+$(firesim_base_dir)/scripts/checkpoints/$(target_sim_tuple): $(fpga_work_dir)/stamp
+	mkdir -p $(@D)
+	ln -sf $(fpga_build_dir)/checkpoints/to_aws $@
+
+# Runs a local fpga-bitstream build. Strongly consider using the manager instead.
+fpga: export CL_DIR := $(fpga_work_dir)
+fpga: $(fpga_delivery_files) $(base_dir)/scripts/checkpoints/$(target_sim_tuple)
+	cd $(fpga_build_dir)/scripts && ./aws_build_dcp_from_cl.sh -notify
+
+else
 
 alveo_stamp             := $(GENERATED_DIR)/$(PLATFORM)/stamp
 alveo_repo_state        := $(GENERATED_DIR)/$(PLATFORM)/design/repo_state
@@ -287,9 +298,9 @@ alveo_firesim_synth_xdc := $(GENERATED_DIR)/$(PLATFORM)/design/firesim_synth.xdc
 alveo_firesim_impl_xdc  := $(GENERATED_DIR)/$(PLATFORM)/design/firesim_impl.xdc
 alveo_firesim_env       := $(GENERATED_DIR)/$(PLATFORM)/scripts/firesim_env.tcl
 
-$(alveo_stamp): $(shell find $(board_dir)/cl_firesim -name '*')
+$(alveo_stamp): $(shell find $(board_dir) -name '*')
 	mkdir -p $(@D)
-	cp -rf $(board_dir)/cl_firesim -T $(@D)
+	cp -rf $(board_dir) -T $(@D)
 	touch $@
 
 $(alveo_repo_state): $(simulator_verilog) $(alveo_stamp)
@@ -328,18 +339,8 @@ fpga: replace-rtl-alveo
 
 .PHONY: replace-rtl-alveo fpga $(alveo_stamp) $(alveo_firesim_top) $(alveo_firesim_synth_xdc) $(alveo_firesim_impl_xdc) $(alveo_firesim_env) $(alveo_firesim_defines)
 
-else
-
-$(firesim_base_dir)/scripts/checkpoints/$(target_sim_tuple): $(fpga_work_dir)/stamp
-	mkdir -p $(@D)
-	ln -sf $(fpga_build_dir)/checkpoints/to_aws $@
-
-# Runs a local fpga-bitstream build. Strongly consider using the manager instead.
-fpga: export CL_DIR := $(fpga_work_dir)
-fpga: $(fpga_delivery_files) $(base_dir)/scripts/checkpoints/$(target_sim_tuple)
-	cd $(fpga_build_dir)/scripts && ./aws_build_dcp_from_cl.sh -notify
-
 endif
+
 #############################
 # FPGA-level RTL Simulation #
 #############################

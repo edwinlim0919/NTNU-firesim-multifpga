@@ -20,7 +20,7 @@ set script_folder [_tcl::get_script_folder]
 ################################################################
 # Check if script is running in correct Vivado version.
 ################################################################
-set scripts_vivado_version 2021.1
+set scripts_vivado_version 2022.2
 set current_vivado_version [version -short]
 
 if { [string first $scripts_vivado_version $current_vivado_version] == -1 } {
@@ -34,26 +34,11 @@ if { [string first $scripts_vivado_version $current_vivado_version] == -1 } {
 # START
 ################################################################
 
-# To test this script, run the following commands from Vivado Tcl console:
-# source design_1_script.tcl
-
-
 # The design that will be created by this Tcl script contains the following 
 # module references:
 # axi_tieoff_master, firesim_wrapper
 
 # Please add the sources of those modules before sourcing this Tcl script.
-
-# If there is no project opened, this script will create a
-# project, but make sure you do not have an existing project
-# <./myproj/project_1.xpr> in the current working folder.
-
-set list_projs [get_projects -quiet]
-if { $list_projs eq "" } {
-   create_project project_1 myproj -part xcu250-figd2104-2L-e
-   set_property BOARD_PART xilinx.com:au250:part0:1.3 [current_project]
-}
-
 
 # CHANGE DESIGN NAME HERE
 variable design_name
@@ -133,6 +118,7 @@ if { $bCheckIPs == 1 } {
    set list_check_ips "\ 
 xilinx.com:ip:axi_clock_converter:2.1\
 xilinx.com:ip:axi_dwidth_converter:2.1\
+xilinx.com:ip:clk_wiz:6.0\
 xilinx.com:ip:ddr4:2.2\
 xilinx.com:ip:proc_sys_reset:5.0\
 xilinx.com:ip:util_vector_logic:2.0\
@@ -261,15 +247,14 @@ proc create_root_design { parentCell firesim_freq } {
 
   # Create instance: axi_dwidth_converter_0, and set properties
   set axi_dwidth_converter_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_dwidth_converter:2.1 axi_dwidth_converter_0 ]
-  # clock conversion is only available in upsizer FIFO mode. by default we are in downsizer mode so we have to manually enter the correct width.
-  set_property -dict [list CONFIG.MI_DATA_WIDTH.VALUE_SRC USER] $axi_dwidth_converter_0
-  set_property -dict [list CONFIG.MI_DATA_WIDTH {512}] $axi_dwidth_converter_0
-  set_property -dict [ list \
-   CONFIG.SI_DATA_WIDTH {64} \
-   CONFIG.SI_ID_WIDTH {16} \
-   CONFIG.FIFO_MODE {2} \
-   CONFIG.ACLK_ASYNC {1} \
- ] $axi_dwidth_converter_0
+  set_property -dict [list \
+    CONFIG.ACLK_ASYNC {1} \
+    CONFIG.FIFO_MODE {2} \
+    CONFIG.MI_DATA_WIDTH {512} \
+    CONFIG.SI_DATA_WIDTH {64} \
+    CONFIG.SI_ID_WIDTH {16} \
+  ] $axi_dwidth_converter_0
+
 
   # Create instance: axi_tieoff_master_0, and set properties
   set block_name axi_tieoff_master
@@ -282,17 +267,29 @@ proc create_root_design { parentCell firesim_freq } {
      return 1
    }
   
+  # Create instance: clk_wiz_0, and set properties
+  set clk_wiz_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:clk_wiz:6.0 clk_wiz_0 ]
+  set_property -dict [list \
+    CONFIG.CLKOUT1_REQUESTED_OUT_FREQ $firesim_freq \
+    CONFIG.USE_LOCKED {false} \
+  ] $clk_wiz_0
+
+
   # Create instance: ddr4_0, and set properties
   set ddr4_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:ddr4:2.2 ddr4_0 ]
-  set_property -dict [ list \
-   CONFIG.C0.DDR4_AUTO_AP_COL_A3 {true} \
-   CONFIG.C0.DDR4_InputClockPeriod {3332} \
-   CONFIG.C0.DDR4_MCS_ECC {false} \
-   CONFIG.C0_CLOCK_BOARD_INTERFACE {default_300mhz_clk0} \
-   CONFIG.C0_DDR4_BOARD_INTERFACE {ddr4_sdram_c0} \
-   CONFIG.Debug_Signal {Disable} \
-   CONFIG.RESET_BOARD_INTERFACE {resetn} \
- ] $ddr4_0
+  set_property -dict [list \
+    CONFIG.ADDN_UI_CLKOUT1_FREQ_HZ {100} \
+    CONFIG.C0.DDR4_AUTO_AP_COL_A3 {true} \
+    CONFIG.C0.DDR4_AxiAddressWidth {34} \
+    CONFIG.C0.DDR4_EN_PARITY {true} \
+    CONFIG.C0.DDR4_MCS_ECC {false} \
+    CONFIG.C0.DDR4_Mem_Add_Map {ROW_COLUMN_BANK_INTLV} \
+    CONFIG.C0_CLOCK_BOARD_INTERFACE {default_300mhz_clk0} \
+    CONFIG.C0_DDR4_BOARD_INTERFACE {ddr4_sdram_c0} \
+    CONFIG.Debug_Signal {Disable} \
+    CONFIG.RESET_BOARD_INTERFACE {resetn} \
+  ] $ddr4_0
+
 
   # Create instance: firesim_wrapper_0, and set properties
   set block_name firesim_wrapper
@@ -313,42 +310,37 @@ proc create_root_design { parentCell firesim_freq } {
 
   # Create instance: resetn_inv_0, and set properties
   set resetn_inv_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:util_vector_logic:2.0 resetn_inv_0 ]
-  set_property -dict [ list \
-   CONFIG.C_OPERATION {not} \
-   CONFIG.C_SIZE {1} \
- ] $resetn_inv_0
+  set_property -dict [list \
+    CONFIG.C_OPERATION {not} \
+    CONFIG.C_SIZE {1} \
+  ] $resetn_inv_0
+
 
   # Create instance: util_ds_buf, and set properties
   set util_ds_buf [ create_bd_cell -type ip -vlnv xilinx.com:ip:util_ds_buf:2.2 util_ds_buf ]
-  set_property -dict [ list \
-   CONFIG.C_BUF_TYPE {IBUFDSGTE} \
-   CONFIG.DIFF_CLK_IN_BOARD_INTERFACE {pcie_refclk} \
-   CONFIG.USE_BOARD_FLOW {true} \
- ] $util_ds_buf
+  set_property -dict [list \
+    CONFIG.DIFF_CLK_IN_BOARD_INTERFACE {pcie_refclk} \
+    CONFIG.USE_BOARD_FLOW {true} \
+  ] $util_ds_buf
+
 
   # Create instance: xdma_0, and set properties
   set xdma_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:xdma:4.1 xdma_0 ]
-  set_property -dict [ list \
-   CONFIG.PCIE_BOARD_INTERFACE {pci_express_x16} \
-   CONFIG.SYS_RST_N_BOARD_INTERFACE {pcie_perstn} \
-   CONFIG.axilite_master_en {true} \
-   CONFIG.axilite_master_size {32} \
-   CONFIG.pciebar2axibar_axist_bypass {0x0000000000000000} \
-   CONFIG.pf0_msix_cap_pba_bir {BAR_1} \
-   CONFIG.pf0_msix_cap_table_bir {BAR_1} \
-   CONFIG.xdma_axi_intf_mm {AXI_Memory_Mapped} \
-   CONFIG.xdma_rnum_chnl {4} \
-   CONFIG.xdma_wnum_chnl {4} \
- ] $xdma_0
+  set_property -dict [list \
+    CONFIG.PCIE_BOARD_INTERFACE {pci_express_x16} \
+    CONFIG.SYS_RST_N_BOARD_INTERFACE {pcie_perstn} \
+    CONFIG.axilite_master_en {true} \
+    CONFIG.axilite_master_size {32} \
+    CONFIG.xdma_axi_intf_mm {AXI_Memory_Mapped} \
+    CONFIG.xdma_rnum_chnl {4} \
+    CONFIG.xdma_wnum_chnl {4} \
+  ] $xdma_0
+
 
   # Create instance: xlconstant_0, and set properties
   set xlconstant_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlconstant:1.1 xlconstant_0 ]
-  set_property -dict [ list \
-   CONFIG.CONST_VAL {0} \
- ] $xlconstant_0
+  set_property CONFIG.CONST_VAL {0} $xlconstant_0
 
-  set clk_wiz_0 [create_bd_cell -type ip -vlnv xilinx.com:ip:clk_wiz:6.0 clk_wiz_0]
-  set_property -dict [list CONFIG.CLKOUT1_REQUESTED_OUT_FREQ $firesim_freq CONFIG.USE_LOCKED {false}] $clk_wiz_0
 
   # Create interface connections
   connect_bd_intf_net -intf_net axi_clock_converter_0_M_AXI [get_bd_intf_pins axi_clock_converter_0/M_AXI] [get_bd_intf_pins firesim_wrapper_0/S_AXI_DMA]
@@ -364,22 +356,20 @@ proc create_root_design { parentCell firesim_freq } {
   connect_bd_intf_net -intf_net xdma_0_pcie_mgt [get_bd_intf_ports pci_express_x16] [get_bd_intf_pins xdma_0/pcie_mgt]
 
   # Create port connections
-  connect_bd_net -net sys_clk_30 [get_bd_pins axi_clock_converter_0/m_axi_aclk] [get_bd_pins axi_clock_converter_1/m_axi_aclk] [get_bd_pins axi_dwidth_converter_0/s_axi_aclk] [get_bd_pins firesim_wrapper_0/sys_clk_30] [get_bd_pins proc_sys_reset_0/slowest_sync_clk] [get_bd_pins clk_wiz_0/clk_out1]
-  connect_bd_net -net ddr4_0_c0_ddr4_ui_clk [get_bd_pins axi_dwidth_converter_0/m_axi_aclk] [get_bd_pins ddr4_0/c0_ddr4_ui_clk] [get_bd_pins proc_sys_reset_1/slowest_sync_clk] [get_bd_pins clk_wiz_0/clk_in1]
+  connect_bd_net -net ddr4_0_c0_ddr4_ui_clk [get_bd_pins axi_dwidth_converter_0/m_axi_aclk] [get_bd_pins clk_wiz_0/clk_in1] [get_bd_pins ddr4_0/c0_ddr4_ui_clk] [get_bd_pins proc_sys_reset_1/slowest_sync_clk]
   connect_bd_net -net pcie_perstn_1 [get_bd_ports pcie_perstn] [get_bd_pins xdma_0/sys_rst_n]
   connect_bd_net -net proc_sys_reset_0_interconnect_aresetn [get_bd_pins axi_clock_converter_0/m_axi_aresetn] [get_bd_pins axi_clock_converter_1/m_axi_aresetn] [get_bd_pins axi_dwidth_converter_0/s_axi_aresetn] [get_bd_pins firesim_wrapper_0/sys_reset_n] [get_bd_pins proc_sys_reset_0/interconnect_aresetn]
   connect_bd_net -net resetn_1 [get_bd_ports resetn] [get_bd_pins proc_sys_reset_0/ext_reset_in] [get_bd_pins proc_sys_reset_1/ext_reset_in] [get_bd_pins resetn_inv_0/Op1]
-  connect_bd_net -net resetn_inv_0_Res [get_bd_pins ddr4_0/sys_rst] [get_bd_pins resetn_inv_0/Res] [get_bd_pins clk_wiz_0/reset]
+  connect_bd_net -net resetn_inv_0_Res [get_bd_pins clk_wiz_0/reset] [get_bd_pins ddr4_0/sys_rst] [get_bd_pins resetn_inv_0/Res]
   connect_bd_net -net rst_ddr4_0_300M_interconnect_aresetn [get_bd_pins axi_dwidth_converter_0/m_axi_aresetn] [get_bd_pins ddr4_0/c0_ddr4_aresetn] [get_bd_pins proc_sys_reset_1/interconnect_aresetn]
+  connect_bd_net -net sys_clk_30 [get_bd_pins axi_clock_converter_0/m_axi_aclk] [get_bd_pins axi_clock_converter_1/m_axi_aclk] [get_bd_pins axi_dwidth_converter_0/s_axi_aclk] [get_bd_pins clk_wiz_0/clk_out1] [get_bd_pins firesim_wrapper_0/sys_clk_30] [get_bd_pins proc_sys_reset_0/slowest_sync_clk]
   connect_bd_net -net util_ds_buf_IBUF_DS_ODIV2 [get_bd_pins util_ds_buf/IBUF_DS_ODIV2] [get_bd_pins xdma_0/sys_clk]
   connect_bd_net -net util_ds_buf_IBUF_OUT [get_bd_pins util_ds_buf/IBUF_OUT] [get_bd_pins xdma_0/sys_clk_gt]
   connect_bd_net -net xdma_0_axi_aclk [get_bd_pins axi_clock_converter_0/s_axi_aclk] [get_bd_pins axi_clock_converter_1/s_axi_aclk] [get_bd_pins xdma_0/axi_aclk]
   connect_bd_net -net xdma_0_axi_aresetn [get_bd_pins axi_clock_converter_0/s_axi_aresetn] [get_bd_pins axi_clock_converter_1/s_axi_aresetn] [get_bd_pins xdma_0/axi_aresetn]
   connect_bd_net -net xlconstant_0_dout [get_bd_pins xdma_0/usr_irq_req] [get_bd_pins xlconstant_0/dout]
 
-
   # Create address segments
-
 
   # Restore current instance
   current_bd_instance $oldCurInst
