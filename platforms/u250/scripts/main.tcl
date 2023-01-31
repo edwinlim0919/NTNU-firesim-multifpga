@@ -80,7 +80,7 @@ if {[llength [get_filesets -quiet impl]]} {
 }
 
 foreach sourceFile [list ${root_dir}/scripts/synthesis.tcl ${root_dir}/scripts/implementation.tcl] {
-  set sourceFile [retrieveVersionedFile ${root_dir}/scripts/synthesis.tcl $vivado_version]
+  set sourceFile [retrieveVersionedFile $sourceFile $vivado_version]
   if {![file exists $sourceFile]} {
     puts "ERROR: could not find $sourceFile"
     exit 1
