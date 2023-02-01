@@ -16,7 +16,7 @@ launch_runs ${impl_run} -to_step route_design -jobs ${jobs}
 wait_on_run ${impl_run}
 
 if {[get_property PROGRESS ${impl_run}] != "100%"} {
-    puts "ERROR: implementation failed"
+    puts "ERROR: first normal implementation failed"
     exit 1
 }
 
@@ -28,7 +28,7 @@ if {$WNS >= 0 && $WHS >= 0} {
   wait_on_run ${impl_run}
 
   if {[get_property PROGRESS ${impl_run}] != "100%"} {
-    puts "ERROR: implementation failed"
+    puts "ERROR: bitstream generation failed"
     exit 1
   }
 } else {
@@ -41,15 +41,32 @@ if {$WNS >= 0 && $WHS >= 0} {
   wait_on_run ${impl_run}
 
   if {[get_property PROGRESS ${impl_run}] != "100%"} {
-    puts "ERROR: implementation failed"
+    puts "ERROR: idr implementation failed"
     exit 1
   }
 
-  set WNS [get_property STATS.WNS ${impl_run}]
-  set WHS [get_property STATS.WHS ${impl_run}]
+  # We need to figure out which IDR implementation run was successful
+  foreach sub_impl_run [get_runs ${impl_run}*] {
+    if {[get_property PROGRESS ${sub_impl_run}] == "100%"} {
+      set WNS [get_property STATS.WNS ${sub_impl_run}]
+      set WHS [get_property STATS.WHS ${sub_impl_run}]
+      if {$WNS >= 0 && $WHS >= 0} {
+        puts "INFO: timing met in idr run ${sub_impl_run}"
+        break
+      }
+    }
+  }
 
   if {$WNS < 0 || $WHS < 0} {
     puts "ERROR: did not meet timing!"
+    exit 1
+  }
+
+  puts "INFO: generate bitstream"
+  launch_runs ${impl_run} -to_step write_bitstream -jobs ${jobs}
+  wait_on_run ${impl_run}
+  if {[get_property PROGRESS ${impl_run}] != "100%"} {
+    puts "ERROR: bitstream generation failed"
     exit 1
   }
 }
