@@ -300,7 +300,7 @@ alveo_firesim_env       := $(GENERATED_DIR)/$(PLATFORM)/scripts/firesim_env.tcl
 
 $(alveo_stamp): $(shell find $(board_dir) -name '*')
 	mkdir -p $(@D)
-	cp -rf $(board_dir) -T $(@D)
+	cp -rLf $(board_dir) -T $(@D)
 	touch $@
 
 $(alveo_repo_state): $(simulator_verilog) $(alveo_stamp)
