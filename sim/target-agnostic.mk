@@ -35,6 +35,8 @@ CONF_NAME ?= $(BASE_FILE_NAME).runtime.conf
 # The host platform type, currently only f1 is supported
 PLATFORM ?=
 
+ALVEO_PLATFORM ?= u250
+
 # Driver source files
 DRIVER_CC ?=
 DRIVER_H ?=
@@ -60,9 +62,6 @@ common_ld_flags := $(TARGET_LD_FLAGS) -lrt
 header := $(GENERATED_DIR)/$(BASE_FILE_NAME).const.h
 # The midas-generated simulator RTL which will be baked into the FPGA shell project
 simulator_verilog := $(GENERATED_DIR)/$(BASE_FILE_NAME).sv
-
-ALVEO_PLATFORMS := u250
-ALVEO_PLATFORMS += u280
 
 ####################################
 # Golden Gate Invocation           #
@@ -174,12 +173,6 @@ DRIVER_CXXOPTS ?= -O2
 
 
 
-ifneq (,$(findstring $(PLATFORM),$(ALVEO_PLATFORMS)))
-$(PLATFORM) = $(OUTPUT_DIR)/$(DESIGN)-alveo
-else
-$(PLATFORM) = $(OUTPUT_DIR)/$(DESIGN)-$(PLATFORM)
-endif
-
 $(PLATFORM): $($(PLATFORM))
 
 .PHONY: driver
@@ -212,13 +205,12 @@ $(vitis): $(header) $(DRIVER_CC) $(DRIVER_H) $(midas_cc) $(midas_h)
 	GEN_DIR=$(OUTPUT_DIR)/build OUT_DIR=$(OUTPUT_DIR) DRIVER="$(DRIVER_CC)" \
 	TOP_DIR=$(chipyard_dir)
 
-ifneq (,$(findstring $(PLATFORM),$(ALVEO_PLATFORMS)))
 
-$($(PLATFORM)): export CXXFLAGS := $(CXXFLAGS) $(common_cxx_flags) $(DRIVER_CXXOPTS)
-$($(PLATFORM)): export LDFLAGS := $(LDFLAGS) $(common_ld_flags) -Wl,-rpath='$$$$ORIGIN'
+$(alveo): export CXXFLAGS := $(CXXFLAGS) $(common_cxx_flags) $(DRIVER_CXXOPTS)
+$(alveo): export LDFLAGS := $(LDFLAGS) $(common_ld_flags) -Wl,-rpath='$$$$ORIGIN'
 
 # Compile Driver
-$($(PLATFORM)): $(header) $(DRIVER_CC) $(DRIVER_H) $(midas_cc) $(midas_h) $(GENERATED_DIR)/$(BASE_FILE_NAME).runtime.conf
+$(alveo): $(header) $(DRIVER_CC) $(DRIVER_H) $(midas_cc) $(midas_h) $(GENERATED_DIR)/$(BASE_FILE_NAME).runtime.conf
 	mkdir -p $(OUTPUT_DIR)/build
 	cp $(header) $(OUTPUT_DIR)/build/
 	cp -f $(GENERATED_DIR)/$(BASE_FILE_NAME).runtime.conf $(OUTPUT_DIR)/runtime.conf
@@ -226,18 +218,18 @@ $($(PLATFORM)): $(header) $(DRIVER_CC) $(DRIVER_H) $(midas_cc) $(midas_h) $(GENE
 	GEN_DIR=$(OUTPUT_DIR)/build OUT_DIR=$(OUTPUT_DIR) DRIVER="$(DRIVER_CC)" \
 	TOP_DIR=$(chipyard_dir)
 
-endif
-
 #############################
 # FPGA Build Initialization #
 #############################
 ifeq ($(PLATFORM), f1)
 board_dir 	   := $(platforms_dir)/f1/aws-fpga/hdk/cl/developer_designs
+else ifeq ($(PLATFORM), alveo)
+board_dir 	   := $(platforms_dir)/$(ALVEO_PLATFORM)
 else
 board_dir 	   := $(platforms_dir)/$(PLATFORM)
 endif
 
-ifeq (,$(findstring $(PLATFORM),$(ALVEO_PLATFORMS)))
+ifneq ($(PLATFORM), alveo)
 
 fpga_work_dir  := $(board_dir)/cl_$(name_tuple)
 fpga_build_dir := $(fpga_work_dir)/build
@@ -290,13 +282,18 @@ fpga: $(fpga_delivery_files) $(base_dir)/scripts/checkpoints/$(target_sim_tuple)
 
 else
 
-alveo_stamp             := $(GENERATED_DIR)/$(PLATFORM)/stamp
-alveo_repo_state        := $(GENERATED_DIR)/$(PLATFORM)/design/repo_state
-alveo_firesim_top       := $(GENERATED_DIR)/$(PLATFORM)/design/firesim_top.sv
-alveo_firesim_defines   := $(GENERATED_DIR)/$(PLATFORM)/design/firesim_defines.vh
-alveo_firesim_synth_xdc := $(GENERATED_DIR)/$(PLATFORM)/design/firesim_synth.xdc
-alveo_firesim_impl_xdc  := $(GENERATED_DIR)/$(PLATFORM)/design/firesim_impl.xdc
-alveo_firesim_env       := $(GENERATED_DIR)/$(PLATFORM)/scripts/firesim_env.tcl
+alveo_work_dir := $(GENERATED_DIR)/$(ALVEO_PLATFORM)
+
+alveo_stamp             := $(alveo_work_dir)/stamp
+alveo_repo_state        := $(alveo_work_dir)/design/repo_state
+alveo_firesim_top       := $(alveo_work_dir)/design/firesim_top.sv
+alveo_firesim_defines   := $(alveo_work_dir)/design/firesim_defines.vh
+alveo_firesim_synth_xdc := $(alveo_work_dir)/design/firesim_synth.xdc
+alveo_firesim_impl_xdc  := $(alveo_work_dir)/design/firesim_impl.xdc
+alveo_firesim_env       := $(alveo_work_dir)/scripts/firesim_env.tcl
+
+alveo_build_files := $(alveo_firesim_top) $(alveo_firesim_defines) $(alveo_firesim_synth_xdc) $(alveo_firesim_impl_xdc) $(alveo_firesim_env)
+alveo_bitstream := $(alveo_work_dir)/vivado_proj/firesim.bit
 
 $(alveo_stamp): $(shell find $(board_dir) -name '*')
 	mkdir -p $(@D)
@@ -332,12 +329,14 @@ $(alveo_firesim_defines): $(simulator_verilog) $(alveo_stamp)
 	cp -f $(GENERATED_DIR)/$(BASE_FILE_NAME).defines.vh $@
 	echo "\`define ABSTRACTCLOCKGATE" >> $@
 
-replace-rtl-alveo: $(alveo_stamp) $(alveo_repo_state) $(alveo_firesim_top) $(alveo_firesim_env) $(alveo_firesim_defines)
+$(alveo_bitstream): $(alveo_files)
+	cd $(alveo_work_dir) && vivado -mode batch -source ./scripts/main.tcl
 
-fpga: replace-rtl-alveo
-	cd $(GENERATED_DIR)/$(PLATFORM) && vivado -mode batch -source ./scripts/main.tcl
+replace-rtl: $(alveo_files)
+.PHONY: replace-rtl-alveo
 
-.PHONY: replace-rtl-alveo fpga $(alveo_stamp) $(alveo_firesim_top) $(alveo_firesim_synth_xdc) $(alveo_firesim_impl_xdc) $(alveo_firesim_env) $(alveo_firesim_defines)
+fpga: $(alveo_bitstream)
+
 
 endif
 
