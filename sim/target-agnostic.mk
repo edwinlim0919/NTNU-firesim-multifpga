@@ -329,10 +329,10 @@ $(alveo_firesim_defines): $(simulator_verilog) $(alveo_stamp)
 	cp -f $(GENERATED_DIR)/$(BASE_FILE_NAME).defines.vh $@
 	echo "\`define ABSTRACTCLOCKGATE" >> $@
 
-$(alveo_bitstream): $(alveo_files)
+$(alveo_bitstream): $(alveo_build_files)
 	cd $(alveo_work_dir) && vivado -mode batch -source ./scripts/main.tcl
 
-replace-rtl: $(alveo_files)
+replace-rtl: $(alveo_build_files)
 .PHONY: replace-rtl-alveo
 
 fpga: $(alveo_bitstream)
