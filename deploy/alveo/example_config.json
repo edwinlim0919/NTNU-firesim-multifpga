@@ -19,7 +19,8 @@
 			"name": "%name%",
 			"worker": "%worker%",
 			"resource": "%resource%",
-			"PLATFORM": "u250",
+			"PLATFORM": "alveo",
+			"ALVEO_PLATFORM": "u250",
 			"TARGET_CONFIG": "FireSimRocketConfig",
 			"PLATFORM_CONFIG": "BaseF1Config1Mem_F50MHz",
 			"CUSTOM_RUNTIME_CONFIG": "common/custom_runtime.conf"

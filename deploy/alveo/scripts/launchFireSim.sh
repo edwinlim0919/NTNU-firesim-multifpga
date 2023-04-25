@@ -11,6 +11,11 @@ if [ -z ${PLATFORM+x} ]; then
 	exit 1
 fi
 
+if [ -z ${ALVEO_PLATFORM+x} ]; then
+	echo "Variable ALVEO_PLATFORM needs to be set!" >&2
+	exit 1
+fi
+
 if [ -z ${TARGET_CONFIG+x} ]; then
 	echo "Variable TARGET_CONFIG needs to be set!" >&2
 	exit 1
@@ -23,7 +28,7 @@ fi
 
 DRIVER="${SCRIPT_DIR}/../../../sim/output/${PLATFORM}/FireSim-${TARGET_CONFIG}-${PLATFORM_CONFIG}/FireSim-alveo"
 RUNTIME_CONFIG="${SCRIPT_DIR}/../../../sim/output/${PLATFORM}/FireSim-${TARGET_CONFIG}-${PLATFORM_CONFIG}/runtime.conf"
-BITSTREAM="${SCRIPT_DIR}/../../../sim/generated-src/${PLATFORM}/FireSim-${TARGET_CONFIG}-${PLATFORM_CONFIG}/${PLATFORM}/vivado_proj/firesim.bit"
+BITSTREAM="${SCRIPT_DIR}/../../../sim/generated-src/${PLATFORM}/FireSim-${TARGET_CONFIG}-${PLATFORM_CONFIG}/${ALVEO_PLATFORM}/vivado_proj/firesim.bit"
 IMAGE_IMG="${RUN_DIR}/workload.img"
 IMAGE_BIN="${RUN_DIR}/workload.bin"
 
