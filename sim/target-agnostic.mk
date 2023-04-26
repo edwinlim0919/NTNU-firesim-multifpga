@@ -171,7 +171,7 @@ vcs-debug: $(vcs_debug)
 ############################
 DRIVER_CXXOPTS ?= -O2
 
-
+$(PLATFORM) ?= $(OUTPUT_DIR)/FireSim-$(PLATFORM)
 
 $(PLATFORM): $($(PLATFORM))
 
