@@ -10,6 +10,10 @@ proc retrieveVersionedFile {filename version} {
   return $filename
 }
 
+set boardpath /scratch/edwinlim/au250/
+set_param board.repoPaths [list $boardpath]
+puts $vivado_version
+
 if {![file exists [set sourceFile [retrieveVersionedFile ${root_dir}/scripts/platform_env.tcl $vivado_version]]]} {
     puts "ERROR: could not find $sourceFile"
     exit 1
@@ -45,7 +49,7 @@ if {[file exists [set sourceFile [retrieveVersionedFile ${root_dir}/scripts/fire
 }
 
 # Loading create_bd.tcl
-if {![file exists [set sourceFile [retrieveVersionedFile ${root_dir}/scripts/create_bd.tcl $vivado_version]]]} {
+if {![file exists [set sourceFile [retrieveVersionedFile ${root_dir}/scripts/create_bd_${vivado_version}.tcl $vivado_version]]]} {
   puts "ERROR: could not find $sourceFile"
   exit 1
 }
@@ -79,7 +83,7 @@ if {[llength [get_filesets -quiet impl]]} {
     set_property constrset impl [get_runs impl_1]
 }
 
-foreach sourceFile [list ${root_dir}/scripts/synthesis.tcl ${root_dir}/scripts/implementation.tcl] {
+foreach sourceFile [list ${root_dir}/scripts/synthesis.tcl ${root_dir}/scripts/implementation_${vivado_version}.tcl] {
   set sourceFile [retrieveVersionedFile $sourceFile $vivado_version]
   if {![file exists $sourceFile]} {
     puts "ERROR: could not find $sourceFile"
