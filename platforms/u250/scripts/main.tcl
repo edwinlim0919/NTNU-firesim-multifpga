@@ -10,7 +10,7 @@ proc retrieveVersionedFile {filename version} {
   return $filename
 }
 
-set boardpath /scratch/edwinlim/au250/
+set boardpath /scratch/au250/
 set_param board.repoPaths [list $boardpath]
 puts $vivado_version
 
